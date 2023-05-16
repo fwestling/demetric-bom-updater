@@ -3,69 +3,168 @@ import logo from "./logo.svg";
 import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [downloadDirect, setDownloadDirect] = useState<boolean>(false);
+  const downloadFile = useCallback(
+    async (filename: string) =>
+      new Promise<boolean>((resolve, reject) => {
+        const url = `http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat/${filename}`;
+        fetch(url, {
+          method: "GET",
+          headers: {
+            Accept: "application/pdf",
+          },
+          mode: "no-cors",
+        })
+          .then((res) => {
+            console.log({ res });
 
-  const handleDownload = useCallback(() => {
-    fetch(
-      `http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat/2021082820210828.grid.Z`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/pdf",
-        },
+            return res.blob();
+          })
+          .then((blob) => {
+            console.log(blob);
+            const blobUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = blobUrl;
+            anchor.download = filename;
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(url);
+            resolve(true);
+          })
+          .catch((e) => resolve(false));
+      }),
+    []
+  );
+
+  const [downloadUrls, setDownloadUrls] = useState<string[]>([]);
+
+  const handleDownload = useCallback(async () => {
+    const toDownload = [];
+    // Loop through all the months from startYear to endYear
+    for (let year = startYear; year <= endYear; year++) {
+      const fromMonth = year === startYear ? startMonth : 1;
+      const toMonth = year === endYear ? endMonth : 12;
+      // Loop through all the months from startYear to endYear
+      for (let month = fromMonth; month <= toMonth; month++) {
+        // Find the last day of the month
+        const lastDayOfMonth = new Date(year, month, 0).getDate();
+
+        // Loop through all the days in the month
+        const fromDay = month === startMonth ? startDay : 1;
+        const targetDay = month === endMonth ? endDay : lastDayOfMonth;
+        for (let day = fromDay; day <= targetDay; day++) {
+          // Create the URL by padding the month and day with 0s
+          const url = `${year}${month.toString().padStart(2, "0")}${day
+            .toString()
+            .padStart(2, "0")}${year}${month.toString().padStart(2, "0")}${day
+            .toString()
+            .padStart(2, "0")}.grid.Z`;
+
+          // Add the URL to the list of URLs to download
+          toDownload.push(url);
+        }
       }
-    )
-      .then((response) => response.blob())
-      .then((blob) => {
-        // Create blob link to download
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", `FileName.pdf`);
-
-        // Append to html link element page
-        document.body.appendChild(link);
-
-        // Start download
-        link.click();
-
-        // Clean up and remove the link
-        link.parentNode?.removeChild(link);
-      });
+    }
+    console.log({ toDownload });
+    if (!downloadDirect) setDownloadUrls(toDownload);
+    else {
+      // Loop through all the URLs to download
+      for (let i = 0; i < toDownload.length; i++) {
+        setDownloading(`${i + 1}/${toDownload.length} ${toDownload[i]}`);
+        await downloadFile(toDownload[i]);
+        return;
+      }
+    }
+    // Set the downloading state to undefined
+    setDownloading(undefined);
   }, []);
+
+  const [downloading, setDownloading] = useState<string | undefined>();
+
+  const [startYear, setStartYear] = useState<number>(2022);
+  const [startMonth, setStartMonth] = useState<number>(6);
+  const [startDay, setStartDay] = useState<number>(24);
+
+  const [endYear, setEndYear] = useState<number>(2023);
+  const [endMonth, setEndMonth] = useState<number>(5);
+  const [endDay, setEndDay] = useState<number>(15);
 
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>Hello Vite + React!</p>
+        {/* Numeric inputs for start and end parameters */}
+        <div>
+          <span>Start year:</span>
+          <input
+            type="number"
+            value={startYear}
+            onChange={(e) => setStartYear(Number.parseInt(e.target.value))}
+          />
+        </div>
+        <div>
+          <span>Start month:</span>
+          <input
+            type="number"
+            value={startMonth}
+            onChange={(e) => setStartMonth(Number.parseInt(e.target.value))}
+          />
+        </div>
+        <div>
+          <span>Start day:</span>
+          <input
+            type="number"
+            value={startDay}
+            onChange={(e) => setStartDay(Number.parseInt(e.target.value))}
+          />
+        </div>
+        <div>
+          <span>End year:</span>
+          <input
+            type="number"
+            value={endYear}
+            onChange={(e) => setEndYear(Number.parseInt(e.target.value))}
+          />
+        </div>
+        <div>
+          <span>End month:</span>
+          <input
+            type="number"
+            value={endMonth}
+            onChange={(e) => setEndMonth(Number.parseInt(e.target.value))}
+          />
+        </div>
+        <div>
+          <span>End day:</span>
+          <input
+            type="number"
+            value={endDay}
+            onChange={(e) => setEndDay(Number.parseInt(e.target.value))}
+          />
+        </div>
+
         <p>
-          <button type="button" onClick={handleDownload}>
-            Download this shit!
-          </button>
+          {downloading === undefined ? (
+            <button type="button" onClick={handleDownload}>
+              Download this shit!
+            </button>
+          ) : (
+            <span>{downloading}</span>
+          )}
         </p>
-        <p>
-          Edit <code>App.tsx</code> and save to test HMR updates.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {" | "}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
+        <div style={{ flexDirection: "column", display: "flex" }}>
+          {downloadUrls.map((url, index) => (
+            <a
+              href={`http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat/${url}`}
+              key={index}
+              target="_blank"
+              onClick={() =>
+                setDownloadUrls((old) => old.filter((x) => x !== url))
+              }
+            >
+              {url}
+            </a>
+          ))}
+        </div>
       </header>
     </div>
   );
