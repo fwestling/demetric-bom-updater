@@ -38,6 +38,14 @@ function App() {
 
   const [downloadUrls, setDownloadUrls] = useState<string[]>([]);
 
+  const [startYear, setStartYear] = useState<number>(2022);
+  const [startMonth, setStartMonth] = useState<number>(6);
+  const [startDay, setStartDay] = useState<number>(24);
+
+  const [endYear, setEndYear] = useState<number>(2023);
+  const [endMonth, setEndMonth] = useState<number>(5);
+  const [endDay, setEndDay] = useState<number>(15);
+
   const handleDownload = useCallback(async () => {
     const toDownload = [];
     // Loop through all the months from startYear to endYear
@@ -77,18 +85,9 @@ function App() {
     }
     // Set the downloading state to undefined
     setDownloading(undefined);
-  }, []);
+  }, [startDay, startYear, startMonth, endDay, endMonth, endYear]);
 
   const [downloading, setDownloading] = useState<string | undefined>();
-
-  const [startYear, setStartYear] = useState<number>(2022);
-  const [startMonth, setStartMonth] = useState<number>(6);
-  const [startDay, setStartDay] = useState<number>(24);
-
-  const [endYear, setEndYear] = useState<number>(2023);
-  const [endMonth, setEndMonth] = useState<number>(5);
-  const [endDay, setEndDay] = useState<number>(15);
-
   return (
     <div className="App">
       <header className="App-header">
