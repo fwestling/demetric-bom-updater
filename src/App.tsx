@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
-import logo from "./logo.svg";
 import "./App.css";
+
+const START_DATE = new Date(2025, 6, 25);
 
 function App() {
   const [downloadDirect, setDownloadDirect] = useState<boolean>(false);
@@ -38,13 +39,13 @@ function App() {
 
   const [downloadUrls, setDownloadUrls] = useState<string[]>([]);
 
-  const [startYear, setStartYear] = useState<number>(2022);
-  const [startMonth, setStartMonth] = useState<number>(6);
-  const [startDay, setStartDay] = useState<number>(24);
+  const [startYear, setStartYear] = useState<number>(START_DATE.getFullYear());
+  const [startMonth, setStartMonth] = useState<number>(START_DATE.getMonth());
+  const [startDay, setStartDay] = useState<number>(START_DATE.getDate());
 
-  const [endYear, setEndYear] = useState<number>(2023);
-  const [endMonth, setEndMonth] = useState<number>(5);
-  const [endDay, setEndDay] = useState<number>(15);
+  const [endYear, setEndYear] = useState<number>(new Date().getFullYear());
+  const [endMonth, setEndMonth] = useState<number>(new Date().getMonth() + 1);
+  const [endDay, setEndDay] = useState<number>(new Date().getDate());
 
   const handleDownload = useCallback(async () => {
     const toDownload = [];
@@ -65,8 +66,8 @@ function App() {
           const url = `${year}${month.toString().padStart(2, "0")}${day
             .toString()
             .padStart(2, "0")}${year}${month.toString().padStart(2, "0")}${day
-            .toString()
-            .padStart(2, "0")}.grid.Z`;
+              .toString()
+              .padStart(2, "0")}.grid.Z`;
 
           // Add the URL to the list of URLs to download
           toDownload.push(url);
