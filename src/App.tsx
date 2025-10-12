@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import "./App.css";
 
-const START_DATE = new Date(2025, 6, 25);
+const START_DATE = new Date(2025, 10, 11);
 
 function App() {
   const [downloadDirect, setDownloadDirect] = useState<boolean>(false);
