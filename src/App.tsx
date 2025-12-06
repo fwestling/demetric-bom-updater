@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import "./App.css";
 
-const START_DATE = new Date(2025, 11, 7);
+const START_DATE = new Date(2025, 12, 4);
 
 function App() {
   const [downloadDirect, setDownloadDirect] = useState<boolean>(false);
@@ -66,8 +66,8 @@ function App() {
           const url = `${year}${month.toString().padStart(2, "0")}${day
             .toString()
             .padStart(2, "0")}${year}${month.toString().padStart(2, "0")}${day
-              .toString()
-              .padStart(2, "0")}.grid.Z`;
+            .toString()
+            .padStart(2, "0")}.grid.Z`;
 
           // Add the URL to the list of URLs to download
           toDownload.push(url);
