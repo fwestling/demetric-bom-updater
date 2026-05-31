@@ -1,42 +1,12 @@
+import JSZip from "jszip";
 import { useCallback, useState } from "react";
 import "./App.css";
 
-const START_DATE = new Date(2026, 1, 16);
+const START_DATE = new Date(2026, 5, 29);
+const BOM_BASE_URL =
+  "http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat";
 
 function App() {
-  const [downloadDirect, setDownloadDirect] = useState<boolean>(false);
-  const downloadFile = useCallback(
-    async (filename: string) =>
-      new Promise<boolean>((resolve, reject) => {
-        const url = `http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat/${filename}`;
-        fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/pdf",
-          },
-          mode: "no-cors",
-        })
-          .then((res) => {
-            console.log({ res });
-
-            return res.blob();
-          })
-          .then((blob) => {
-            console.log(blob);
-            const blobUrl = URL.createObjectURL(blob);
-            const anchor = document.createElement("a");
-            anchor.href = blobUrl;
-            anchor.download = filename;
-            anchor.click();
-            anchor.remove();
-            URL.revokeObjectURL(url);
-            resolve(true);
-          })
-          .catch((e) => resolve(false));
-      }),
-    []
-  );
-
   const [downloadUrls, setDownloadUrls] = useState<string[]>([]);
 
   const [startYear, setStartYear] = useState<number>(START_DATE.getFullYear());
@@ -47,8 +17,11 @@ function App() {
   const [endMonth, setEndMonth] = useState<number>(new Date().getMonth() + 1);
   const [endDay, setEndDay] = useState<number>(new Date().getDate());
 
-  const handleDownload = useCallback(async () => {
-    const toDownload = [];
+  const [downloading, setDownloading] = useState<string | undefined>();
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+
+  const buildDownloadList = useCallback(() => {
+    const toDownload: string[] = [];
     // Loop through all the months from startYear to endYear
     for (let year = startYear; year <= endYear; year++) {
       const fromMonth = year === startYear ? startMonth : 1;
@@ -74,21 +47,67 @@ function App() {
         }
       }
     }
-    console.log({ toDownload });
-    if (!downloadDirect) setDownloadUrls(toDownload);
-    else {
-      // Loop through all the URLs to download
-      for (let i = 0; i < toDownload.length; i++) {
-        setDownloading(`${i + 1}/${toDownload.length} ${toDownload[i]}`);
-        await downloadFile(toDownload[i]);
-        return;
-      }
-    }
-    // Set the downloading state to undefined
-    setDownloading(undefined);
-  }, [startDay, startYear, startMonth, endDay, endMonth, endYear]);
 
-  const [downloading, setDownloading] = useState<string | undefined>();
+    return toDownload;
+  }, [endDay, endMonth, endYear, startDay, startMonth, startYear]);
+
+  const handleGenerateLinks = useCallback(() => {
+    setErrorMessage(undefined);
+    setDownloadUrls(buildDownloadList());
+  }, [buildDownloadList]);
+
+  const handleDownloadZip = useCallback(async () => {
+    setErrorMessage(undefined);
+    const toDownload = buildDownloadList();
+
+    if (toDownload.length === 0) {
+      return;
+    }
+
+    try {
+      const zip = new JSZip();
+
+      for (let i = 0; i < toDownload.length; i++) {
+        const filename = toDownload[i];
+        setDownloading(`Downloading ${i + 1}/${toDownload.length}: ${filename}`);
+
+        const response = await fetch(`${BOM_BASE_URL}/${filename}`);
+        if (response.type === "opaque") {
+          throw new Error("CORS blocked the file request (opaque response).");
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Request failed for ${filename} with status ${response.status}`
+          );
+        }
+
+        const blob = await response.blob();
+        zip.file(filename, blob);
+      }
+
+      setDownloading("Building zip file...");
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const anchor = document.createElement("a");
+      anchor.href = zipUrl;
+      anchor.download = `bom-grid-${Date.now()}.zip`;
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(zipUrl);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to build zip due to an unknown error.";
+      setErrorMessage(
+        `Zip download failed: ${message}. If this is CORS, use Generate links as fallback.`
+      );
+    }
+
+    setDownloading(undefined);
+  }, [buildDownloadList]);
+
   return (
     <div className="App">
       <header className="App-header">
@@ -144,19 +163,26 @@ function App() {
 
         <p>
           {downloading === undefined ? (
-            <button type="button" onClick={handleDownload}>
-              Download this shit!
-            </button>
+            <>
+              <button type="button" onClick={handleDownloadZip}>
+                Download zip
+              </button>
+              <button type="button" onClick={handleGenerateLinks}>
+                Generate links
+              </button>
+            </>
           ) : (
             <span>{downloading}</span>
           )}
         </p>
+        {errorMessage && <p>{errorMessage}</p>}
         <div style={{ flexDirection: "column", display: "flex" }}>
           {downloadUrls.map((url, index) => (
             <a
-              href={`http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat/${url}`}
+              href={`${BOM_BASE_URL}/${url}`}
               key={index}
               target="_blank"
+              rel="noreferrer"
               onClick={() =>
                 setDownloadUrls((old) => old.filter((x) => x !== url))
               }
