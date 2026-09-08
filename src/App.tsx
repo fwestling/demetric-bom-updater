@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import { useCallback, useState } from "react";
 import "./App.css";
 
-const START_DATE = new Date(2026, 7, 2);
+const START_DATE = new Date(2026, 9, 7);
 const BOM_BASE_URL =
   "http://www.bom.gov.au/web03/ncc/www/awap/solar/solarave/daily/grid/0.05/history/nat";
 
